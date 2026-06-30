@@ -98,8 +98,7 @@ param(
 
     # Service account / permission
     [switch]$SetupServiceAccount,
-    [ValidateSet('Create', 'AssignExisting')]
-    [string]$ServiceAccountMode,
+    [string]$ServiceAccountMode,    # 'Create' or 'AssignExisting' (validated in the body)
     [string]$ServiceAccountName,
     [string]$ServiceAccountDomain,
     [string]$ServiceAccountPrincipal,
@@ -279,6 +278,9 @@ if ($svcEnabled) {
     elseif (-not $NonInteractive) {
         $ans = Read-DefaultedValue -Prompt "Service account mode: 'Create' new SSO user or 'AssignExisting'" -Default 'Create'
         $svcMode = if ($ans -match '^[Aa]') { 'AssignExisting' } else { 'Create' }
+    }
+    if ($svcMode -notin @('Create', 'AssignExisting')) {
+        throw "ServiceAccountMode must be 'Create' or 'AssignExisting' (got '$svcMode')."
     }
 
     if ($PSBoundParameters.ContainsKey('PasswordLength')) { $pwLen = $PasswordLength } elseif ($cfgPwLen) { $pwLen = $cfgPwLen }
