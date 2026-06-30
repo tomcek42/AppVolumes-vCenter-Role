@@ -21,11 +21,26 @@ in the current working directory. Later runs reuse them.
 > & ([scriptblock]::Create((irm https://raw.githubusercontent.com/tomcek42/AppVolumes-vCenter-Role/main/Invoke-AppVolumesRole.ps1))) -Server vcenter.example.local -RoleName AppVolumes
 > ```
 
+## Service account (optional)
+
+`Invoke-AppVolumesRole.ps1` can also create the service account and assign the
+role. When enabled it either:
+
+- **creates** a new vCenter SSO user (`vsphere.local`) with a strong generated
+  password (shown once), or
+- **assigns** an existing principal (e.g. an AD account),
+
+and grants the role as a permission at the **vCenter root** (propagated).
+
+> Creating an SSO user requires the `VMware.vSphere.SsoAdmin` module:
+> `Install-Module VMware.vSphere.SsoAdmin -Scope CurrentUser`
+
 ## Requirements
 
 - Windows PowerShell 5.1 or PowerShell 7+
 - VMware/Omnissa PowerCLI: `Install-Module -Name VMware.PowerCLI -Scope CurrentUser`
-- A vCenter account allowed to create roles (e.g. Administrator)
+- A vCenter account allowed to create roles and permissions (e.g. Administrator)
+- For SSO account creation: the `VMware.vSphere.SsoAdmin` module
 
 ## Files
 

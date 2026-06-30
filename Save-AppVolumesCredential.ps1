@@ -1,24 +1,23 @@
 <#
 .SYNOPSIS
-    Speichert die vCenter-Anmeldeinformationen verschluesselt fuer New-AppVolumesRole.ps1.
+    Stores the vCenter credentials encrypted for New-AppVolumesRole.ps1.
 
 .DESCRIPTION
-    Fragt Benutzername und Passwort interaktiv ab und legt sie ueber Export-Clixml
-    verschluesselt ab. Die Verschluesselung erfolgt mit der Windows Data Protection
-    API (DPAPI): Die Datei kann ausschliesslich vom SELBEN Windows-Benutzer auf der
-    SELBEN Maschine wieder entschluesselt werden, auf der sie erstellt wurde.
+    Prompts for username and password interactively and stores them encrypted via
+    Export-Clixml. Encryption uses the Windows Data Protection API (DPAPI): the
+    file can only be decrypted by the SAME Windows user on the SAME machine that
+    created it.
 
-    Fuer automatisierte/geplante Ausfuehrung muss dieses Skript daher unter genau
-    dem Konto und auf dem Host laufen, unter dem spaeter auch New-AppVolumesRole.ps1
-    ausgefuehrt wird.
+    For automated/scheduled execution, run this script under exactly the account
+    and host that will later run New-AppVolumesRole.ps1.
 
 .PARAMETER ConfigPath
-    Pfad zur config.json. Standard: config.json im Skriptverzeichnis.
-    Username und Zielpfad (CredentialPath) werden daraus gelesen.
+    Path to config.json. Default: config.json in the script directory.
+    Username and target path (CredentialPath) are read from it.
 
 .PARAMETER CredentialPath
-    Optionaler direkter Zielpfad fuer die Credential-Datei. Ueberschreibt den
-    Wert aus der config.json.
+    Optional direct target path for the credential file. Overrides the value from
+    config.json.
 
 .EXAMPLE
     .\Save-AppVolumesCredential.ps1
@@ -33,7 +32,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Defaults aus config.json holen, sofern vorhanden
+# Read defaults from config.json if present
 $defaultUser = $null
 if (Test-Path -LiteralPath $ConfigPath) {
     try {
@@ -44,7 +43,7 @@ if (Test-Path -LiteralPath $ConfigPath) {
         }
     }
     catch {
-        Write-Host "Hinweis: config.json konnte nicht gelesen werden ($($_.Exception.Message))." -ForegroundColor DarkYellow
+        Write-Host "Note: could not read config.json ($($_.Exception.Message))." -ForegroundColor DarkYellow
     }
 }
 
@@ -52,26 +51,26 @@ if ([string]::IsNullOrWhiteSpace($CredentialPath)) {
     $CredentialPath = Join-Path -Path $PSScriptRoot -ChildPath 'vcenter-credential.xml'
 }
 
-# Relative Pfade an das Skriptverzeichnis binden
+# Resolve relative paths against the script directory
 if (-not [System.IO.Path]::IsPathRooted($CredentialPath)) {
     $CredentialPath = Join-Path -Path $PSScriptRoot -ChildPath $CredentialPath
 }
 
-# Anmeldeinformationen abfragen (Username vorbelegt, falls in config.json vorhanden)
+# Prompt for credentials (username prefilled from config.json when available)
 if (-not [string]::IsNullOrWhiteSpace($defaultUser)) {
-    $credential = Get-Credential -UserName $defaultUser -Message 'vCenter-Anmeldeinformationen fuer App Volumes'
+    $credential = Get-Credential -UserName $defaultUser -Message 'vCenter credentials for App Volumes'
 }
 else {
-    $credential = Get-Credential -Message 'vCenter-Anmeldeinformationen fuer App Volumes'
+    $credential = Get-Credential -Message 'vCenter credentials for App Volumes'
 }
 
-# Verschluesselt ablegen (DPAPI, an Benutzer + Maschine gebunden)
+# Store encrypted (DPAPI, bound to user + machine)
 $credential | Export-Clixml -LiteralPath $CredentialPath -Force
 
 Write-Host ""
-Write-Host "Anmeldeinformationen verschluesselt gespeichert:" -ForegroundColor Green
+Write-Host "Credentials stored encrypted:" -ForegroundColor Green
 Write-Host "  $CredentialPath" -ForegroundColor Green
-Write-Host "Benutzer: $($credential.UserName)" -ForegroundColor Gray
+Write-Host "User: $($credential.UserName)" -ForegroundColor Gray
 Write-Host ""
-Write-Host "Hinweis: Die Datei ist an diesen Windows-Benutzer und diese Maschine gebunden." -ForegroundColor Yellow
-Write-Host "Fuehre New-AppVolumesRole.ps1 unter demselben Konto auf demselben Host aus." -ForegroundColor Yellow
+Write-Host "Note: the file is bound to this Windows user and machine." -ForegroundColor Yellow
+Write-Host "Run New-AppVolumesRole.ps1 under the same account on the same host." -ForegroundColor Yellow
