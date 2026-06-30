@@ -51,11 +51,11 @@ module (`Install-Module VMware.vSphere.SsoAdmin -Scope CurrentUser`).
 
 | File | Purpose |
 |------|---------|
-| `Invoke-AppVolumesRole.ps1` | Self-contained script for the `irm` one-liner (interactive). |
-| `New-AppVolumesRole.ps1` | File-based variant driven by `config.json`. |
-| `Save-AppVolumesCredential.ps1` | Stores the vCenter credentials encrypted. |
-| `config.json` | Configuration for the file-based variant. |
+| `Invoke-AppVolumesRole.ps1` | The script (self-contained, interactive). |
 | `permissions.txt` | Reference list of the GUI privileges. |
+
+On first run the script writes a `config.json` and the encrypted credential file
+to its working directory and reuses them on later runs.
 
 ## Credentials
 

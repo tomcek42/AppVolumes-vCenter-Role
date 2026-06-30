@@ -3,7 +3,8 @@ vcenter-credential.xml
 *.cred
 *.clixml
 
-# Lokale/abweichende Konfigurationen mit echten Werten
+# Generierte/lokale Konfiguration mit umgebungsspezifischen Werten
+config.json
 config.local.json
 
 # PowerCLI / PowerShell
