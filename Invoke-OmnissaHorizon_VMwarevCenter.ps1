@@ -76,6 +76,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Minimum supported vCenter Server major version (checked after connecting).
+$MinimumVCenterMajorVersion = 8
+
 # Force TLS 1.2 (important for downloads on Windows PowerShell 5.1)
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
@@ -623,16 +626,29 @@ $configObject | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ConfigPath -
 Write-Host "Configuration saved: $ConfigPath" -ForegroundColor DarkGray
 
 # --- Preflight: required modules ----------------------------------------------
+# Check that every PowerShell module needed for the selected run is present (and
+# offer to install any that are missing) before we touch vCenter. SsoAdmin is
+# only required when a service account is to be CREATED (vsphere.local SSO user).
 Write-Section 'Required PowerShell modules'
 $needsSso = ($settingsList | Where-Object { $_.SvcEnabled -and $_.SvcMode -eq 'Create' }).Count -gt 0
-$modulesOk = $true
-if (-not (Resolve-RequiredModule -CheckName 'VMware.VimAutomation.Core' -InstallName 'VMware.PowerCLI')) { $modulesOk = $false }
+
+$requiredModules = @(
+    @{ CheckName = 'VMware.VimAutomation.Core'; InstallName = 'VMware.PowerCLI' }
+)
 if ($needsSso) {
-    if (-not (Resolve-RequiredModule -CheckName 'VMware.vSphere.SsoAdmin' -InstallName 'VMware.vSphere.SsoAdmin')) { $modulesOk = $false }
+    $requiredModules += @{ CheckName = 'VMware.vSphere.SsoAdmin'; InstallName = 'VMware.vSphere.SsoAdmin' }
 }
-if (-not $modulesOk) {
-    throw 'One or more required modules are missing. Install them (see above) and re-run.'
+
+$missingModules = @()
+foreach ($m in $requiredModules) {
+    if (-not (Resolve-RequiredModule -CheckName $m.CheckName -InstallName $m.InstallName)) {
+        $missingModules += $m.CheckName
+    }
 }
+if ($missingModules.Count -gt 0) {
+    throw "Missing required PowerShell module(s): $($missingModules -join ', '). Install them (see above) and re-run."
+}
+Write-Host "All required PowerShell modules are present." -ForegroundColor Green
 Import-Module 'VMware.VimAutomation.Core' -ErrorAction Stop
 
 $certAction = if ($ignoreCert) { 'Ignore' } else { 'Fail' }
@@ -680,6 +696,17 @@ try {
     Write-Host ""
     Write-Host "Connecting to vCenter '$viServer' ..." -ForegroundColor Cyan
     $connection = Connect-VIServer -Server $viServer -Credential $credential -ErrorAction Stop
+
+    # --- Require vCenter Server 8.0 or newer -----------------------------------
+    if ($connection.ProductLine -ne 'vpx') {
+        throw "Connected endpoint '$viServer' is not a vCenter Server (ProductLine '$($connection.ProductLine)'). This tool must be run against vCenter Server 8.0 or newer."
+    }
+    $vcVersion = $null
+    try { $vcVersion = [version]$connection.Version } catch { }
+    if (-not $vcVersion -or $vcVersion.Major -lt $MinimumVCenterMajorVersion) {
+        throw "This tool requires vCenter Server $MinimumVCenterMajorVersion.0 or newer. Connected vCenter reports version '$($connection.Version)' (build $($connection.Build))."
+    }
+    Write-Host "vCenter version $($connection.Version) (build $($connection.Build)) - OK (>= $MinimumVCenterMajorVersion.0)." -ForegroundColor Green
 
     foreach ($s in $settingsList) {
         Invoke-ProductRoleSetup -Settings $s -Connection $connection -Credential $credential -IgnoreCert $ignoreCert -ServerName $viServer

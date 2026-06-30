@@ -66,10 +66,17 @@ are missing. Creating an SSO user requires the `VMware.vSphere.SsoAdmin` module
 
 ## Requirements
 
+- **vCenter Server 8.0 or newer** (the script verifies the version after
+  connecting and aborts on older releases)
 - Windows PowerShell 5.1 or PowerShell 7+
 - VMware/Omnissa PowerCLI: `Install-Module -Name VMware.PowerCLI -Scope CurrentUser`
 - A vCenter account allowed to create roles and permissions (e.g. Administrator)
 - For SSO account creation: the `VMware.vSphere.SsoAdmin` module
+
+The script runs a **module preflight** before connecting: it checks that every
+required module is present (and offers to install any that are missing), and
+verifies the **vCenter version** right after connecting — both before any role or
+permission is touched.
 
 ## Files
 
